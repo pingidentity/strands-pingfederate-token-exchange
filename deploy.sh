@@ -8,9 +8,6 @@ VENV_DIR=".venv"
 ENV_FILE=".env"
 ENTRYPOINT="examples/my_agent.py"
 REGION="${AWS_REGION:-us-west-2}"
-HOST="${HOST:-0.0.0.0}"
-PORT="${PORT:-8080}"
-
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
@@ -113,9 +110,9 @@ run_local() {
 
     # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
-    info "Starting example runtime on http://$HOST:$PORT"
+    info "Starting native AgentCore example runtime on http://localhost:8080"
     info "Use Ctrl+C to stop it"
-    PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}" uvicorn examples.my_agent:app --host "$HOST" --port "$PORT"
+    PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}" python examples/my_agent.py
 }
 
 deploy_agent() {
@@ -127,7 +124,11 @@ deploy_agent() {
     # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
     info "Configuring AgentCore runtime"
-    agentcore configure -e "$ENTRYPOINT" -r "$REGION" --disable-memory
+    agentcore configure \
+        -e "$ENTRYPOINT" \
+        -r "$REGION" \
+        --disable-memory \
+        --request-header-allowlist "Authorization"
     info "Deploying runtime"
     agentcore deploy
 }

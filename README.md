@@ -19,7 +19,7 @@ transaction token for the actual downstream transaction against the MCP server.
 The project is now split into:
 
 - `src/aws_strands_pf_sdk/`: reusable SDK code
-- `examples/`: a FastAPI AgentCore-style example app and MCP config
+- `examples/`: a native Bedrock AgentCore runtime example and MCP config
 - `tests/`: lightweight unit tests for the core logic
 - `docs/`: configuration and scope notes
 
@@ -31,7 +31,7 @@ This SDK focuses on the core token-exchange path:
 - load MCP server definitions from YAML
 - exchange the inbound bearer token only when `tools/call` is executed
 - cache exchanged tokens per invocation
-- provide an example AgentCore-compatible FastAPI runtime
+- provide a native Bedrock AgentCore runtime example
 
 Prerequisites:
 
@@ -39,6 +39,7 @@ Prerequisites:
 - any required JWK generation, rotation, or key management is handled outside this SDK
 - client authentication uses a supported shared-secret method
 - downstream MCP servers are exposed over HTTP using `streamable_http`
+- the AgentCore runtime forwards the inbound `Authorization` header to agent code
 
 Additional design boundaries are documented explicitly instead of being
 half-wired into the runtime.

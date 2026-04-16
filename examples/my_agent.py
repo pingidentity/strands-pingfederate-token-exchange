@@ -1,4 +1,4 @@
-"""Example FastAPI runtime for the SDK."""
+"""Native Bedrock AgentCore runtime example for the SDK."""
 
 from __future__ import annotations
 
@@ -8,9 +8,8 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+from bedrock_agentcore import BedrockAgentCoreApp, RequestContext
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
 from strands import Agent
 
 from aws_strands_pf_sdk.agentcore import (
@@ -34,8 +33,7 @@ DEFAULT_SYSTEM_PROMPT = (
     "All tool calls are authenticated with PingFederate-issued delegated access tokens. "
     "If a tool call returns an insufficient_scope payload, return only that JSON payload with no explanation."
 )
-
-app = FastAPI(title="AWS Strands PingFederate Example Agent")
+app = BedrockAgentCoreApp()
 
 
 @lru_cache(maxsize=1)
@@ -46,31 +44,20 @@ def _load_runtime_config() -> tuple[PingFederateSettings, list[Any]]:
     return settings, server_configs
 
 
-@app.get("/ping")
-async def ping() -> dict[str, str]:
-    """Required AgentCore health-check endpoint."""
-
-    return {"status": "healthy"}
-
-
-@app.post("/invocations")
-async def invoke(request: Request) -> Any:
+@app.entrypoint
+def invoke(payload: dict[str, Any], context: RequestContext) -> Any:
     """Handle an AgentCore invocation request."""
 
-    try:
-        payload = await request.json()
-    except Exception:
-        payload = {}
-
     prompt = str(payload.get("prompt") or "Hello. How can I help?")
+    request_headers = context.request_headers or {}
 
     try:
-        subject_token = extract_subject_token(request.headers, payload)
+        subject_token = extract_subject_token(request_headers, payload)
         settings, server_configs = _load_runtime_config()
     except AuthenticationError as exc:
-        return JSONResponse({"error": "invalid_request", "detail": str(exc)}, status_code=401)
+        return {"error": "invalid_request", "detail": str(exc)}
     except ConfigurationError as exc:
-        return JSONResponse({"error": "invalid_configuration", "detail": str(exc)}, status_code=500)
+        return {"error": "invalid_configuration", "detail": str(exc)}
 
     try:
         mcp_clients = create_mcp_clients(
@@ -84,33 +71,25 @@ async def invoke(request: Request) -> Any:
         )
         result = agent(prompt)
     except TokenExchangeError as exc:
-        return JSONResponse(
-            {
-                "error": exc.error,
-                "detail": exc.description,
-            },
-            status_code=exc.status_code or 502,
-        )
+        return {
+            "error": exc.error,
+            "detail": exc.description,
+        }
     except Exception as exc:
         LOGGER.exception("Agent invocation failed")
-        return JSONResponse(
-            {
-                "error": "agent_invocation_failed",
-                "detail": str(exc),
-                "type": type(exc).__name__,
-            },
-            status_code=500,
-        )
+        return {
+            "error": "agent_invocation_failed",
+            "detail": str(exc),
+            "type": type(exc).__name__,
+        }
 
     message = getattr(result, "message", result)
     scope_error = parse_scope_error_payload(message)
     if scope_error is not None:
-        return JSONResponse(scope_error, status_code=401)
+        return scope_error
 
     return serialize_agent_message(message)
 
 
 if __name__ == "__main__":
-    import uvicorn
-
-    uvicorn.run("my_agent:app", host="0.0.0.0", port=8080, reload=False)
+    app.run()
