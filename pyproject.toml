@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aws-strands-pf-sdk"
+version = "0.1.0"
+description = "SDK for PingFederate token exchange with AWS Strands MCP tool calls."
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["aws", "strands", "pingfederate", "oauth2", "token-exchange", "mcp"]
+dependencies = [
+  "httpx>=0.27,<1.0",
+  "PyYAML>=6.0,<7.0",
+  "strands-agents",
+]
+
+[project.optional-dependencies]
+example = [
+  "fastapi>=0.115,<1.0",
+  "python-dotenv>=1.0,<2.0",
+  "uvicorn>=0.30,<1.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

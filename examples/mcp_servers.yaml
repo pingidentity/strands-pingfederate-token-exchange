@@ -1,0 +1,21 @@
+# Example MCP server registry for the SDK.
+#
+# Fields:
+#   name:           Logical server name used in logs.
+#   url:            Streamable HTTP MCP endpoint.
+#   audience:       Audience/resource value used during token exchange.
+#   scope_prefix:   Prefix used to forward matching incoming scopes.
+#   default_scopes: Fallback scopes requested if the subject token does not
+#                   already contain any scope matching scope_prefix.
+#   verify_ssl:     Set to false only for local development.
+
+servers:
+  - name: findadomain-dev
+    description: Find available domains
+    url: https://api.findadomain.dev/mcp
+    transport: streamable_http
+    audience: https://api.findadomain.dev/mcp
+    scope_prefix: find:domain:
+    default_scopes:
+      - find:domain
+    verify_ssl: true
