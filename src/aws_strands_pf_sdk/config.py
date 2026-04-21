@@ -78,6 +78,34 @@ class PingFederateSettings:
     client_auth_method: str = "client_secret_basic"
     audience_parameter: str = "resource"
     request_timeout_seconds: float = 10.0
+    enable_actor_token: bool = False
+    actor_client_id: str | None = None
+    actor_client_secret: str | None = None
+    actor_scopes: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "actor_scopes", _normalize_scopes(self.actor_scopes))
+
+        if self.client_auth_method not in SUPPORTED_CLIENT_AUTH_METHODS:
+            supported = ", ".join(sorted(SUPPORTED_CLIENT_AUTH_METHODS))
+            raise ConfigurationError(
+                f"Unsupported client auth method '{self.client_auth_method}'. Supported values: {supported}"
+            )
+
+        if self.audience_parameter not in SUPPORTED_AUDIENCE_PARAMETERS:
+            supported = ", ".join(sorted(SUPPORTED_AUDIENCE_PARAMETERS))
+            raise ConfigurationError(
+                f"Unsupported audience parameter '{self.audience_parameter}'. Supported values: {supported}"
+            )
+
+        if self.enable_actor_token and not self.actor_client_id:
+            raise ConfigurationError(
+                "PF_ACTOR_CLIENT_ID is required when PF_ENABLE_ACTOR_TOKEN is enabled"
+            )
+        if self.enable_actor_token and not self.actor_client_secret:
+            raise ConfigurationError(
+                "PF_ACTOR_CLIENT_SECRET is required when PF_ENABLE_ACTOR_TOKEN is enabled"
+            )
 
     @classmethod
     def from_env(cls, env: Mapping[str, str] | None = None) -> "PingFederateSettings":
@@ -128,6 +156,13 @@ class PingFederateSettings:
             _read_optional(values, "PF_REQUEST_TIMEOUT_SECONDS"),
             default=10.0,
         )
+        enable_actor_token = _parse_bool(
+            _read_optional(values, "PF_ENABLE_ACTOR_TOKEN"),
+            default=False,
+        )
+        actor_client_id = _read_optional(values, "PF_ACTOR_CLIENT_ID")
+        actor_client_secret = _read_optional(values, "PF_ACTOR_CLIENT_SECRET")
+        actor_scopes = _normalize_scopes(_read_optional(values, "PF_ACTOR_SCOPES"))
         return cls(
             token_endpoint=token_endpoint,
             client_id=client_id,
@@ -139,6 +174,10 @@ class PingFederateSettings:
             client_auth_method=client_auth_method,
             audience_parameter=audience_parameter,
             request_timeout_seconds=request_timeout_seconds,
+            enable_actor_token=enable_actor_token,
+            actor_client_id=actor_client_id,
+            actor_client_secret=actor_client_secret,
+            actor_scopes=actor_scopes,
         )
 
 

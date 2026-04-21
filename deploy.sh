@@ -75,6 +75,14 @@ require_var() {
     fail "Set $var_name in .env"
 }
 
+is_truthy() {
+    local value="${1:-}"
+    case "${value,,}" in
+        1|true|yes|on) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
 validate_env() {
     ensure_env_file
 
@@ -86,6 +94,10 @@ validate_env() {
     require_var PF_TOKEN_ENDPOINT
     require_var PF_CLIENT_ID
     require_var PF_CLIENT_SECRET
+    if is_truthy "${PF_ENABLE_ACTOR_TOKEN:-false}"; then
+        require_var PF_ACTOR_CLIENT_ID
+        require_var PF_ACTOR_CLIENT_SECRET
+    fi
 
     local mcp_config="${MCP_SERVER_CONFIG:-examples/mcp_servers.yaml}"
     if [[ ! -f "$mcp_config" ]]; then

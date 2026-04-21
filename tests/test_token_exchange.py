@@ -64,7 +64,76 @@ class TokenExchangeClientTests(unittest.TestCase):
         self.assertEqual(captured["data"]["resource"], ["https://api.example.com/mcp"])
         self.assertEqual(captured["data"]["scope"], ["find:domain:read"])
 
-    def test_exchange_token_raises_on_invalid_json(self) -> None:
+    def test_exchange_token_includes_actor_token_when_provided(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_urlopen(request, *, timeout, context):
+            captured["headers"] = dict(request.header_items())
+            captured["data"] = parse.parse_qs(request.data.decode("utf-8"))
+            captured["timeout"] = timeout
+            return _FakeResponse(
+                {
+                    "access_token": "exchanged-token",
+                    "token_type": "Bearer",
+                    "expires_in": 300,
+                }
+            )
+
+        settings = PingFederateSettings(
+            token_endpoint="https://issuer.example/as/token.oauth2",
+            client_id="client-id",
+            client_secret="client-secret",
+        )
+        client = PingFederateTokenExchangeClient(settings, urlopen=fake_urlopen)
+        client.exchange_token(
+            "subject-token",
+            audience="https://api.example.com/mcp",
+            scopes=("find:domain:read",),
+            actor_token="actor-token",
+        )
+
+        self.assertEqual(captured["data"]["actor_token"], ["actor-token"])
+        self.assertEqual(
+            captured["data"]["actor_token_type"],
+            ["urn:ietf:params:oauth:token-type:access_token"],
+        )
+
+    def test_client_credentials_token_uses_existing_auth_method_and_optional_scopes(self) -> None:
+        captured: dict[str, object] = {}
+
+        def fake_urlopen(request, *, timeout, context):
+            captured["headers"] = dict(request.header_items())
+            captured["data"] = parse.parse_qs(request.data.decode("utf-8"))
+            captured["timeout"] = timeout
+            return _FakeResponse(
+                {
+                    "access_token": "actor-token",
+                    "token_type": "Bearer",
+                    "expires_in": 120,
+                }
+            )
+
+        settings = PingFederateSettings(
+            token_endpoint="https://issuer.example/as/token.oauth2",
+            client_id="client-id",
+            client_secret="client-secret",
+            client_auth_method="client_secret_post",
+        )
+        client = PingFederateTokenExchangeClient(settings, urlopen=fake_urlopen)
+        result = client._client_credentials_token(
+            client_id="actor-client-id",
+            client_secret="actor-client-secret",
+            scopes=("mcp:invoke", "mcp:read"),
+        )
+
+        self.assertEqual(result.access_token, "actor-token")
+        self.assertNotIn("Authorization", captured["headers"])
+        self.assertEqual(captured["data"]["grant_type"], ["client_credentials"])
+        self.assertEqual(captured["data"]["client_id"], ["actor-client-id"])
+        self.assertEqual(captured["data"]["client_secret"], ["actor-client-secret"])
+        self.assertEqual(captured["data"]["scope"], ["mcp:invoke mcp:read"])
+
+    def test_exchange_token_raises_on_missing_access_token(self) -> None:
         def fake_urlopen(request, *, timeout, context):
             del request, timeout, context
             return _FakeResponse({"unexpected": "value"})

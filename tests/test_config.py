@@ -8,6 +8,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from aws_strands_pf_sdk.config import MCPServerConfig, PingFederateSettings
+from aws_strands_pf_sdk.errors import ConfigurationError
 
 
 class PingFederateSettingsTests(unittest.TestCase):
@@ -43,6 +44,51 @@ class PingFederateSettingsTests(unittest.TestCase):
         self.assertEqual(settings.client_auth_method, "client_secret_post")
         self.assertEqual(settings.audience_parameter, "audience")
         self.assertEqual(settings.request_timeout_seconds, 15.0)
+
+    def test_from_env_loads_actor_settings_when_enabled(self) -> None:
+        settings = PingFederateSettings.from_env(
+            {
+                "PF_TOKEN_ENDPOINT": "https://issuer.example/as/token.oauth2",
+                "PF_CLIENT_ID": "client-id",
+                "PF_CLIENT_SECRET": "client-secret",
+                "PF_ENABLE_ACTOR_TOKEN": "true",
+                "PF_ACTOR_CLIENT_ID": "actor-client-id",
+                "PF_ACTOR_CLIENT_SECRET": "actor-client-secret",
+                "PF_ACTOR_SCOPES": "mcp:invoke mcp:read",
+            }
+        )
+
+        self.assertTrue(settings.enable_actor_token)
+        self.assertEqual(settings.actor_client_id, "actor-client-id")
+        self.assertEqual(settings.actor_client_secret, "actor-client-secret")
+        self.assertEqual(settings.actor_scopes, ("mcp:invoke", "mcp:read"))
+
+    def test_from_env_requires_actor_credentials_when_enabled(self) -> None:
+        with self.assertRaises(ConfigurationError):
+            PingFederateSettings.from_env(
+                {
+                    "PF_TOKEN_ENDPOINT": "https://issuer.example/as/token.oauth2",
+                    "PF_CLIENT_ID": "client-id",
+                    "PF_CLIENT_SECRET": "client-secret",
+                    "PF_ENABLE_ACTOR_TOKEN": "true",
+                    "PF_ACTOR_CLIENT_ID": "actor-client-id",
+                }
+            )
+
+    def test_from_env_ignores_missing_actor_credentials_when_disabled(self) -> None:
+        settings = PingFederateSettings.from_env(
+            {
+                "PF_TOKEN_ENDPOINT": "https://issuer.example/as/token.oauth2",
+                "PF_CLIENT_ID": "client-id",
+                "PF_CLIENT_SECRET": "client-secret",
+                "PF_ENABLE_ACTOR_TOKEN": "false",
+                "PF_ACTOR_CLIENT_ID": "actor-client-id",
+            }
+        )
+
+        self.assertFalse(settings.enable_actor_token)
+        self.assertEqual(settings.actor_client_id, "actor-client-id")
+        self.assertIsNone(settings.actor_client_secret)
 
 
 class MCPServerConfigTests(unittest.TestCase):

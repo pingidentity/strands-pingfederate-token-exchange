@@ -7,14 +7,15 @@ The token exchange model in this SDK is:
 
 - `subject token`: the inbound bearer token presented by the caller to the
   agent runtime
-- `actor token`: an optional token included in the exchange request when the
-  deployment needs explicit delegation context
+- `actor token`: a global agent/runtime token that the SDK mints with
+  `client_credentials` when actor-token support is enabled
 - `transaction token`: the exchanged downstream access token returned by
   PingFederate and then attached to MCP `tools/call` requests
 
-In other words, the SDK receives a caller's subject token, can optionally add
-an actor token to the RFC 8693 exchange request, and uses the returned
-transaction token for the actual downstream transaction against the MCP server.
+In other words, the SDK receives a caller's subject token, can mint an actor
+token using a second OAuth client, and sends both into the RFC 8693 exchange
+request when actor-token support is enabled. The returned transaction token is
+then used for the actual downstream transaction against the MCP server.
 
 The project is now split into:
 
@@ -29,6 +30,7 @@ This SDK focuses on the core token-exchange path:
 
 - load PingFederate settings from environment variables
 - load MCP server definitions from YAML
+- optionally mint a global actor token with `client_credentials`
 - exchange the inbound bearer token only when `tools/call` is executed
 - cache exchanged tokens per invocation
 - provide a native Bedrock AgentCore runtime example
@@ -62,6 +64,8 @@ pip install -e .[example]
    ```
 
 2. Fill in your PingFederate token endpoint and client credentials in `.env`.
+   If you want actor-token support, also set `PF_ENABLE_ACTOR_TOKEN=true` and
+   provide the `PF_ACTOR_*` values.
 
 3. Adjust the downstream MCP server definitions in `examples/mcp_servers.yaml`.
 
@@ -101,6 +105,7 @@ clients = create_mcp_clients(
 
 - avoid token exchange for connection setup and tool discovery
 - perform token exchange only for `tools/call`
+- mint and reuse a global actor token when `PF_ENABLE_ACTOR_TOKEN=true`
 - derive requested scopes from the subject token when possible
 - fall back to configured default scopes when necessary
 

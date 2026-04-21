@@ -77,18 +77,49 @@ class PingFederateTokenExchangeClient:
             form_data["actor_token"] = actor_token
             form_data["actor_token_type"] = actor_token_type or "urn:ietf:params:oauth:token-type:access_token"
 
+        return self._request_token(
+            form_data,
+            client_id=self._settings.client_id,
+            client_secret=self._settings.client_secret,
+        )
+
+    def _client_credentials_token(
+        self,
+        *,
+        client_id: str,
+        client_secret: str,
+        scopes: tuple[str, ...] = (),
+    ) -> TokenExchangeResult:
+        form_data = {"grant_type": "client_credentials"}
+        scope_value = " ".join(scopes) if scopes else None
+        if scope_value:
+            form_data["scope"] = scope_value
+
+        return self._request_token(
+            form_data,
+            client_id=client_id,
+            client_secret=client_secret,
+        )
+
+    def _request_token(
+        self,
+        form_data: dict[str, str],
+        *,
+        client_id: str,
+        client_secret: str,
+    ) -> TokenExchangeResult:
         headers = {
             "Accept": "application/json",
             "Content-Type": "application/x-www-form-urlencoded",
         }
 
         if self._settings.client_auth_method == "client_secret_basic":
-            credentials = f"{self._settings.client_id}:{self._settings.client_secret}".encode("utf-8")
+            credentials = f"{client_id}:{client_secret}".encode("utf-8")
             basic_auth = base64.b64encode(credentials).decode("ascii")
             headers["Authorization"] = f"Basic {basic_auth}"
         else:
-            form_data["client_id"] = self._settings.client_id
-            form_data["client_secret"] = self._settings.client_secret
+            form_data["client_id"] = client_id
+            form_data["client_secret"] = client_secret
 
         encoded_body = parse.urlencode(form_data).encode("utf-8")
         http_request = request.Request(

@@ -19,8 +19,23 @@ Optional:
 - `PF_VERIFY_SSL`: Defaults to `true`.
 - `PF_SCOPE_PREFIX_TO_STRIP`: Optional prefix removed from incoming subject-token scopes before matching.
 - `PF_REQUEST_TIMEOUT_SECONDS`: Defaults to `10`.
+- `PF_ENABLE_ACTOR_TOKEN`: Defaults to `false`. When `true`, the SDK mints a global actor token with `client_credentials` before RFC 8693 exchange.
+- `PF_ACTOR_CLIENT_ID`: Required when `PF_ENABLE_ACTOR_TOKEN=true`.
+- `PF_ACTOR_CLIENT_SECRET`: Required when `PF_ENABLE_ACTOR_TOKEN=true`.
+- `PF_ACTOR_SCOPES`: Optional space-delimited scopes used when minting the actor token.
 - `MCP_SERVER_CONFIG`: Optional path to the YAML file consumed by the example runtime. Defaults to `examples/mcp_servers.yaml`.
 - `STRANDS_SYSTEM_PROMPT`: Optional override for the example runtime system prompt.
+
+## Actor Token Behavior
+
+When `PF_ENABLE_ACTOR_TOKEN=true`, the SDK:
+
+1. Mints one global actor token using `grant_type=client_credentials`.
+2. Uses the same PingFederate token endpoint, SSL mode, timeout, and client-auth method already configured for token exchange.
+3. Reuses that actor token across MCP exchanges created by the current `create_mcp_clients(...)` call until it expires.
+4. Includes the actor token in RFC 8693 token-exchange requests for downstream MCP `tools/call`.
+
+If actor support is disabled, the SDK keeps the current subject-only exchange flow.
 
 ## MCP Server YAML
 
