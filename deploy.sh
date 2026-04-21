@@ -6,7 +6,7 @@ cd "$SCRIPT_DIR"
 
 VENV_DIR=".venv"
 ENV_FILE=".env"
-ENTRYPOINT="examples/my_agent.py"
+ENTRYPOINT="${AGENT_ENTRYPOINT:-examples/my_agent.py}"
 REGION="${AWS_REGION:-us-west-2}"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -103,6 +103,9 @@ validate_env() {
     if [[ ! -f "$mcp_config" ]]; then
         fail "MCP server config file not found: $mcp_config"
     fi
+    if [[ ! -f "$ENTRYPOINT" ]]; then
+        fail "Agent entrypoint not found: $ENTRYPOINT"
+    fi
 
     success "Environment configuration looks valid"
 }
@@ -122,9 +125,9 @@ run_local() {
 
     # shellcheck disable=SC1091
     source "$VENV_DIR/bin/activate"
-    info "Starting native AgentCore example runtime on http://localhost:8080"
+    info "Starting AgentCore example runtime from $ENTRYPOINT on http://localhost:8080"
     info "Use Ctrl+C to stop it"
-    PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}" python examples/my_agent.py
+    PYTHONPATH="src${PYTHONPATH:+:$PYTHONPATH}" python "$ENTRYPOINT"
 }
 
 deploy_agent() {

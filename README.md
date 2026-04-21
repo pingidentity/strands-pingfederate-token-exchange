@@ -20,7 +20,7 @@ then used for the actual downstream transaction against the MCP server.
 The project is now split into:
 
 - `src/aws_strands_pf_sdk/`: reusable SDK code
-- `examples/`: a native Bedrock AgentCore runtime example and MCP config
+- `examples/`: native Bedrock AgentCore runtime examples and MCP config
 - `tests/`: lightweight unit tests for the core logic
 - `docs/`: configuration and scope notes
 
@@ -64,15 +64,19 @@ pip install -e .[example]
    ```
 
 2. Fill in your PingFederate token endpoint and client credentials in `.env`.
-   If you want actor-token support, also set `PF_ENABLE_ACTOR_TOKEN=true` and
-   provide the `PF_ACTOR_*` values.
+   If you want the dedicated subject-plus-actor example, also set
+   `PF_ENABLE_ACTOR_TOKEN=true` and provide the `PF_ACTOR_*` values.
 
 3. Adjust the downstream MCP server definitions in `examples/mcp_servers.yaml`.
 
-4. Run the example locally:
+4. Run one of the examples locally:
 
    ```bash
    ./deploy.sh local
+   ```
+
+   ```bash
+   AGENT_ENTRYPOINT=examples/my_agent_subject_actor.py ./deploy.sh local
    ```
 
 5. Invoke the runtime:
@@ -112,15 +116,26 @@ clients = create_mcp_clients(
 ## Configuration
 
 - Environment variables: [docs/configuration.md](docs/configuration.md)
-- Design boundaries: [docs/design-boundaries.md](docs/design-boundaries.md)
 
 Configuration uses the canonical `PF_*` environment variable names only.
+
+## Examples
+
+- `examples/my_agent.py`: baseline AgentCore runtime that uses the inbound
+  subject token and works with actor-token support either disabled or enabled.
+- `examples/my_agent_subject_actor.py`: explicit subject-plus-actor example
+  that fails fast unless `PF_ENABLE_ACTOR_TOKEN=true` and the `PF_ACTOR_*`
+  settings are present.
+- `examples/agentcore_runtime.py`: shared runtime builder used by both example
+  entrypoints so the request handling logic stays aligned.
 
 ## Example Layout
 
 ```text
 examples/
+  agentcore_runtime.py
   my_agent.py
+  my_agent_subject_actor.py
   mcp_servers.yaml
 src/
   aws_strands_pf_sdk/
