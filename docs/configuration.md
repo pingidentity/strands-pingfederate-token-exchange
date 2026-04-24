@@ -37,6 +37,17 @@ When `PF_ENABLE_ACTOR_TOKEN=true`, the SDK:
 
 If actor support is disabled, the SDK keeps the current subject-only exchange flow.
 
+## Transaction Token Caching
+
+Transaction tokens are cached automatically inside the client set returned by
+`create_mcp_clients(...)`.
+
+- The cache is in-memory only and is not shared across processes.
+- In the built-in AgentCore examples, `create_mcp_clients(...)` is called inside each `invoke()` call, so transaction tokens can be reused across multiple MCP server requests within one agent invocation, but not across separate agent invocations.
+- If another integration reuses the same returned `MCPClient` instances across requests, the transaction-token cache will live for as long as that client set is reused.
+
+Actor-token caching remains internal to the SDK and is reused within the lifetime of a single `create_mcp_clients(...)` client set.
+
 ## MCP Server YAML
 
 The SDK does not hardcode MCP server definitions. The example runtime reads a

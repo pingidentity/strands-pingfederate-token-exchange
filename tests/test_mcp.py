@@ -384,6 +384,40 @@ class ToolCallAuthTests(unittest.TestCase):
         self.assertEqual(fake_exchange_client.exchange_requests[0]["actor_token"], "actor-token-1")
         self.assertEqual(fake_exchange_client.exchange_requests[1]["actor_token"], "actor-token-1")
 
+    def test_transaction_token_is_reused_within_same_auth_flow(self) -> None:
+        fake_exchange_client = _FakeExchangeClient()
+        settings = _base_settings()
+        auth = _ToolCallAuth(
+            subject_token="subject-token",
+            subject_sub="user-123",
+            subject_scopes=("find:domain:read",),
+            server_config=_server_config(),
+            settings=settings,
+            cache=ExchangedTokenCache(),
+            actor_token_provider=_ActorTokenProvider(
+                settings=settings,
+                exchange_client=fake_exchange_client,
+            ),
+            exchange_client=fake_exchange_client,
+        )
+        request_one = httpx.Request(
+            "POST",
+            "https://example.com/mcp",
+            content=json.dumps({"method": "tools/call"}).encode("utf-8"),
+        )
+        request_two = httpx.Request(
+            "POST",
+            "https://example.com/mcp",
+            content=json.dumps({"method": "tools/call"}).encode("utf-8"),
+        )
+
+        list(auth.auth_flow(request_one))
+        list(auth.auth_flow(request_two))
+
+        self.assertEqual(len(fake_exchange_client.exchange_requests), 1)
+        self.assertEqual(request_one.headers["Authorization"], "Bearer transaction-token-1")
+        self.assertEqual(request_two.headers["Authorization"], "Bearer transaction-token-1")
+
     def test_subject_only_exchange_remains_unchanged_when_actor_support_is_disabled(self) -> None:
         fake_exchange_client = _FakeExchangeClient()
         settings = _base_settings()

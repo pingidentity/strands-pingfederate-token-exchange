@@ -44,7 +44,7 @@ def _build_cached_token(
 
 
 class ExchangedTokenCache:
-    """Simple per-invocation cache for downstream access tokens."""
+    """Simple per-client-set cache for downstream transaction tokens."""
 
     def __init__(self, *, safety_window_seconds: int = DEFAULT_TOKEN_SAFETY_WINDOW_SECONDS) -> None:
         self._safety_window_seconds = safety_window_seconds

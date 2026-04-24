@@ -109,9 +109,17 @@ clients = create_mcp_clients(
 
 - avoid token exchange for connection setup and tool discovery
 - perform token exchange only for `tools/call`
+- cache transaction tokens across repeated MCP `tools/call` requests made by the returned client set
 - mint and reuse a global actor token when `PF_ENABLE_ACTOR_TOKEN=true`
 - derive requested scopes from the subject token when possible
 - fall back to configured default scopes when necessary
+
+The built-in AgentCore examples call `create_mcp_clients(...)` inside each
+`invoke()` request handler, so in those examples transaction tokens can be
+reused across multiple MCP server requests made during one agent invocation,
+but they are not reused across separate agent invocations. If another
+integration reuses the same `MCPClient` instances across requests, the
+transaction-token cache will live for as long as that client set is reused.
 
 ## Configuration
 
@@ -126,14 +134,11 @@ Configuration uses the canonical `PF_*` environment variable names only.
 - `examples/my_agent_subject_actor.py`: explicit subject-plus-actor example
   that fails fast unless `PF_ENABLE_ACTOR_TOKEN=true` and the `PF_ACTOR_*`
   settings are present.
-- `examples/agentcore_runtime.py`: shared runtime builder used by both example
-  entrypoints so the request handling logic stays aligned.
 
 ## Example Layout
 
 ```text
 examples/
-  agentcore_runtime.py
   my_agent.py
   my_agent_subject_actor.py
   mcp_servers.yaml
